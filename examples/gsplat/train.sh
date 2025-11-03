@@ -13,11 +13,11 @@ DATA=/home/woshihg/PycharmProjects/Difix3D/dataset/${SCENE_ID}
 CKPT_PATH=/home/woshihg/PycharmProjects/Difix3D/outputs/difix3d/gsplat/${SCENE_ID}/ckpts/ckpt_29999_rank0.pt
 DATA_FACTOR=1
 TEST_EVERY=51
-TRAIN_SEQUNCES=[1,16,135,255]
+TRAIN_SEQUNCES="1 16 135 255"
 OUTPUT_DIR=outputs/difix3d/gsplat/pointsgroup/${TEST_EVERY}/${SCENE_ID}
 CUDA_VISIBLE_DEVICES=0 python examples/gsplat/simple_trainer_difix3d.py default \
     --data_dir ${DATA} --data_factor ${DATA_FACTOR} \
     --result_dir ${OUTPUT_DIR} --no-normalize-world-space --test_every ${TEST_EVERY} \
-    -- train_sequences ${TRAIN_SEQUNCES} \
+    --train_sequence ${TRAIN_SEQUNCES} \
     #        --ckpt ${CKPT_PATH} \
 #    --disable_viewer\
