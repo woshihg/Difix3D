@@ -1,4 +1,6 @@
 import os
+import time
+
 import requests
 import sys
 import numpy as np
@@ -255,10 +257,12 @@ class Difix(torch.nn.Module):
         else:
             ref_image = ref_image.resize((new_width, new_height), Image.LANCZOS)
             x = torch.stack([T(image), T(ref_image)], dim=0).unsqueeze(0).cuda()
-        
+        time_start = time.time()
         output_image = self.forward(x, timesteps, prompt, prompt_tokens)[:, 0]
         output_pil = transforms.ToPILImage()(output_image[0].cpu() * 0.5 + 0.5)
         output_pil = output_pil.resize((input_width, input_height), Image.LANCZOS)
+        time_end = time.time()
+        print(f"Sampling took {time_end - time_start:.2f} seconds")
         
         return output_pil
 

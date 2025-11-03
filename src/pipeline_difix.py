@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import inspect
+import time
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import PIL.Image
@@ -933,6 +934,9 @@ class DifixPipeline(
                 "not-safe-for-work" (nsfw) content.
         """
 
+        # 时间起始点
+        # start_time = time.time()
+
         callback = kwargs.pop("callback", None)
         callback_steps = kwargs.pop("callback_steps", None)
 
@@ -982,6 +986,9 @@ class DifixPipeline(
 
         device = self._execution_device
 
+        # 完成准备工作时间点
+        # prep_time = time.time()
+        # print(f"Preparation time: {prep_time - start_time:.2f} seconds")
         # 3. Encode input prompt
         lora_scale = (
             self.cross_attention_kwargs.get("scale", None) if self.cross_attention_kwargs is not None else None
@@ -1017,6 +1024,9 @@ class DifixPipeline(
         if ref_image is not None:
             ref_image = self.image_processor.preprocess(ref_image)
 
+        # 完成编码时间点
+        # encode_time = time.time()
+        # print(f"Encoding time: {encode_time - prep_time:.2f} seconds")
         # 4. Prepare timesteps
         timesteps, num_inference_steps = retrieve_timesteps(self.scheduler, num_inference_steps, device, timesteps)
 
@@ -1047,6 +1057,9 @@ class DifixPipeline(
                 guidance_scale_tensor, embedding_dim=self.unet.config.time_cond_proj_dim
             ).to(device=device, dtype=latents.dtype)
 
+        # 完成准备工作时间点
+        # prep_end_time = time.time()
+
         # 7. Denoising loop
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         self._num_timesteps = len(timesteps)
@@ -1059,6 +1072,9 @@ class DifixPipeline(
                 latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
+                # 记录U-Net开始时间点
+                # unet_start_time = time.time()
+
                 # predict the noise residual
                 noise_pred = self.unet(
                     latent_model_input,
@@ -1070,6 +1086,11 @@ class DifixPipeline(
                     return_dict=False,
                 )[0]
 
+                # 记录U-Net结束时间点
+                # unet_end_time = time.time()
+                # print(f"U-Net time step {i+1}/{len(timesteps)}: {unet_end_time - unet_start_time:.2f} seconds")
+
+                print("do_classifier_free_guidance:", self.do_classifier_free_guidance)
                 # perform guidance
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
@@ -1081,6 +1102,10 @@ class DifixPipeline(
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
+
+                # 记录完成Latent时间点
+                # latents_end_time = time.time()
+                # print(f"Latent update time step {i+1}/{len(timesteps)}: {latents_end_time - unet_end_time:.2f} seconds")
 
                 self.vae.decoder.incoming_skip_acts = self.vae.encoder.current_down_blocks
 
@@ -1100,7 +1125,11 @@ class DifixPipeline(
                     if callback is not None and i % callback_steps == 0:
                         step_idx = i // getattr(self.scheduler, "order", 1)
                         callback(step_idx, t, latents)
-        
+
+        # 完成去噪时间点
+        # denoise_end_time = time.time()
+        # print(f"Denoising time: {denoise_end_time - prep_end_time:.2f} seconds")
+
         if ref_image is not None:
             latents = latents.chunk(2, dim=0)[0]
 
@@ -1113,18 +1142,33 @@ class DifixPipeline(
             image = latents
             has_nsfw_concept = None
 
+
+
         if has_nsfw_concept is None:
             do_denormalize = [True] * image.shape[0]
         else:
             do_denormalize = [not has_nsfw for has_nsfw in has_nsfw_concept]
 
+        # 完成解码时间点
+        # decode_end_time = time.time()
+        # print(f"Decoding time: {decode_end_time - denoise_end_time:.2f} seconds")
+
+        print("output_type:", output_type)
         if ref_image is not None:
             image = image.chunk(2, dim=0)[0]
         image = self.image_processor.postprocess(image, output_type=output_type, do_denormalize=do_denormalize)
 
+        # 完成后处理时间点
+        # postprocess_end_time = time.time()
+        # print(f"Post-processing time: {postprocess_end_time - decode_end_time:.2f} seconds")
+
         # Offload all models
         self.maybe_free_model_hooks()
 
+
+        # 结束时间点
+        # end_time = time.time()
+        # print(f"Total time taken: {end_time - start_time:.2f} seconds")
         if not return_dict:
             return (image, has_nsfw_concept)
 

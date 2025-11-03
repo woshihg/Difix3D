@@ -1,4 +1,5 @@
 import os
+import time
 import imageio
 import argparse
 import numpy as np
@@ -56,6 +57,7 @@ if __name__ == "__main__":
     for i, input_image in enumerate(tqdm(input_images, desc="Processing images")):
         image = Image.open(input_image).convert('RGB')
         ref_image = Image.open(ref_images[i]).convert('RGB') if args.ref_image is not None else None
+        start_time = time.time()
         output_image = model.sample(
             image,
             height=args.height,
@@ -64,6 +66,8 @@ if __name__ == "__main__":
             prompt=args.prompt
         )
         output_images.append(output_image)
+        elapsed = time.time() - start_time
+        print(f"Processed {os.path.basename(input_image)} in {elapsed:.2f} seconds")
 
     # Save outputs
     if args.video:
