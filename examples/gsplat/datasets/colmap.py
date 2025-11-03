@@ -35,13 +35,13 @@ class Parser:
         factor: int = 1,
         normalize: bool = False,
         test_every: int = 8,
-        train_seqence: Optional[List[int]] = None,
+        train_sequence: Optional[List[int]] = None,
     ):
         self.data_dir = data_dir
         self.factor = factor
         self.normalize = normalize
         self.test_every = test_every
-        self.train_seqence = train_seqence
+        self.train_sequence = train_sequence
 
         colmap_dir = os.path.join(data_dir, "sparse/0/")
         if not os.path.exists(colmap_dir):
@@ -346,13 +346,13 @@ class Dataset:
         else:
             if split == "train":
                 # 如果 train_seqence 不为 None，则只使用指定的序列作为训练集
-                if self.parser.train_seqence is not None:
-                    self.indices = [ind for ind in indices if ind in self.parser.train_seqence]
+                if self.parser.train_sequence is not None:
+                    self.indices = [ind for ind in indices if ind in self.parser.train_sequence]
                 else:
                     self.indices = indices[indices % self.parser.test_every == 0]
             else:
-                if self.parser.train_seqence is not None:
-                    self.indices = [ind for ind in indices if ind not in self.parser.train_seqence]
+                if self.parser.train_sequence is not None:
+                    self.indices = [ind for ind in indices if ind not in self.parser.train_sequence]
                 else:
                     self.indices = indices[indices % self.parser.test_every != 0]
 

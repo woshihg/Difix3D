@@ -17,7 +17,7 @@ TRAIN_SEQUNCES=[1,16,135,255]
 OUTPUT_DIR=outputs/difix3d/gsplat/pointsgroup/${TEST_EVERY}/${SCENE_ID}
 CUDA_VISIBLE_DEVICES=0 python examples/gsplat/simple_trainer_difix3d.py default \
     --data_dir ${DATA} --data_factor ${DATA_FACTOR} \
-    --result_dir ${OUTPUT_DIR} --no-normalize-world-space --test_every ${TEST_EVERY}
+    --result_dir ${OUTPUT_DIR} --no-normalize-world-space --test_every ${TEST_EVERY} \
     -- train_sequences ${TRAIN_SEQUNCES} \
     #        --ckpt ${CKPT_PATH} \
 #    --disable_viewer\

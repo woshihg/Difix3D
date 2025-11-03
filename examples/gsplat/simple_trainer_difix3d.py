@@ -70,7 +70,7 @@ class Config:
     # Every N images there is a test image
     test_every: int = 8
 
-    train_seqence: Optional[List[int]] = None
+    train_sequence: Optional[List[int]] = None
     # Random crop size for training  (experimental)
     patch_size: Optional[int] = None
     # A global scaler that applies to the scene size related parameters
@@ -317,7 +317,7 @@ class Runner:
             factor=cfg.data_factor,
             normalize=cfg.normalize_world_space,
             test_every=cfg.test_every,
-            train_seqence = cfg.train_seqence,
+            train_sequence= cfg.train_sequence,
         )
         self.trainset = Dataset(
             self.parser,
