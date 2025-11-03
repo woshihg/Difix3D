@@ -35,11 +35,13 @@ class Parser:
         factor: int = 1,
         normalize: bool = False,
         test_every: int = 8,
+        train_seqence: Optional[List[int]] = None,
     ):
         self.data_dir = data_dir
         self.factor = factor
         self.normalize = normalize
         self.test_every = test_every
+        self.train_seqence = train_seqence
 
         colmap_dir = os.path.join(data_dir, "sparse/0/")
         if not os.path.exists(colmap_dir):
@@ -184,19 +186,19 @@ class Parser:
 
         # 3D points and {image_name -> [point_idx]}
         points = manager.points3D.astype(np.float32)
-        points_err = manager.point3D_errors.astype(np.float32)
+        # points_err = manager.point3D_errors.astype(np.float32)
         points_rgb = manager.point3D_colors.astype(np.uint8)
-        point_indices = dict()
+        # point_indices = dict()
 
-        image_id_to_name = {v: k for k, v in manager.name_to_image_id.items()}
-        for point_id, data in manager.point3D_id_to_images.items():
-            for image_id, _ in data:
-                image_name = image_id_to_name[image_id]
-                point_idx = manager.point3D_id_to_point3D_idx[point_id]
-                point_indices.setdefault(image_name, []).append(point_idx)
-        point_indices = {
-            k: np.array(v).astype(np.int32) for k, v in point_indices.items()
-        }
+        # image_id_to_name = {v: k for k, v in manager.name_to_image_id.items()}
+        # for point_id, data in manager.point3D_id_to_images.items():
+        #     for image_id, _ in data:
+        #         image_name = image_id_to_name[image_id]
+        #         point_idx = manager.point3D_id_to_point3D_idx[point_id]
+        #         point_indices.setdefault(image_name, []).append(point_idx)
+        # point_indices = {
+        #     k: np.array(v).astype(np.int32) for k, v in point_indices.items()
+        # }
 
         # Normalize the world space.
         if normalize:
@@ -222,9 +224,9 @@ class Parser:
         self.imsize_dict = imsize_dict  # Dict of camera_id -> (width, height)
         self.mask_dict = mask_dict  # Dict of camera_id -> mask
         self.points = points  # np.ndarray, (num_points, 3)
-        self.points_err = points_err  # np.ndarray, (num_points,)
+        # self.points_err = points_err  # np.ndarray, (num_points,)
         self.points_rgb = points_rgb  # np.ndarray, (num_points, 3)
-        self.point_indices = point_indices  # Dict[str, np.ndarray], image_name -> [M,]
+        # self.point_indices = point_indices  # Dict[str, np.ndarray], image_name -> [M,]
         self.transform = transform  # np.ndarray, (4, 4)
 
         # load one image to check the size. In the case of tanksandtemples dataset, the
@@ -343,9 +345,17 @@ class Dataset:
             self.indices = indices
         else:
             if split == "train":
-                self.indices = indices[indices % self.parser.test_every == 0]
+                # 如果 train_seqence 不为 None，则只使用指定的序列作为训练集
+                if self.parser.train_seqence is not None:
+                    self.indices = [ind for ind in indices if ind in self.parser.train_seqence]
+                else:
+                    self.indices = indices[indices % self.parser.test_every == 0]
             else:
-                self.indices = indices[indices % self.parser.test_every != 0]
+                if self.parser.train_seqence is not None:
+                    self.indices = [ind for ind in indices if ind not in self.parser.train_seqence]
+                else:
+                    self.indices = indices[indices % self.parser.test_every != 0]
+
 
     def __len__(self):
         return len(self.indices)

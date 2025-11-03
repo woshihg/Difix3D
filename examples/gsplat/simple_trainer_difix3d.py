@@ -38,7 +38,8 @@ from lib_bilagrid import (
     color_correct,
     total_variation_loss,
 )
-
+import sys
+sys.path.append("/home/woshihg/PycharmProjects/Difix3D")
 from gsplat.compression import PngCompression
 from gsplat.distributed import cli
 from gsplat.rendering import rasterization
@@ -52,7 +53,7 @@ from src.pipeline_difix import DifixPipeline
 @dataclass
 class Config:
     # Disable viewer
-    disable_viewer: bool = True # ! turn off viser
+    disable_viewer: bool = False # ! turn off viser
     # Path to the .pt files. If provide, it will skip training and run evaluation only.
     ckpt: Optional[List[str]] = None
     # Name of compression strategy to use
@@ -68,6 +69,8 @@ class Config:
     result_dir: str = "results/garden"
     # Every N images there is a test image
     test_every: int = 8
+
+    train_seqence: Optional[List[int]] = None
     # Random crop size for training  (experimental)
     patch_size: Optional[int] = None
     # A global scaler that applies to the scene size related parameters
@@ -314,6 +317,7 @@ class Runner:
             factor=cfg.data_factor,
             normalize=cfg.normalize_world_space,
             test_every=cfg.test_every,
+            train_seqence = cfg.train_seqence,
         )
         self.trainset = Dataset(
             self.parser,
@@ -321,7 +325,11 @@ class Runner:
             patch_size=cfg.patch_size,
             load_depths=cfg.depth_loss,
         )
+        # 打印训练图像数量
+        print(f"Number of training images: {len(self.trainset)}")
         self.valset = Dataset(self.parser, split="val")
+        # 打印测试图像数量
+        print(f"Number of test images: {len(self.valset)}")
         self.scene_scale = self.parser.scene_scale * 1.1 * cfg.global_scale
         print("Scene scale:", self.scene_scale)
 
@@ -743,7 +751,7 @@ class Runner:
                 mem = torch.cuda.max_memory_allocated() / 1024**3
                 stats = {
                     "mem": mem,
-                    "ellipse_time": time.time() - global_tic,
+                    "ellipse_time": time.time() - global_tic,  # timing disabled
                     "num_GS": len(self.splats["means"]),
                 }
                 print("Step: ", step, stats)
@@ -878,7 +886,15 @@ class Runner:
         for i in tqdm.trange(0, len(novel_poses), desc="Fixing artifacts..."):
             image = Image.open(image_paths[i]).convert("RGB")
             ref_image = Image.open(ref_image_paths[i]).convert("RGB")
+            # 将ref_image调整到与image相同的尺寸
+            ref_image = ref_image.resize(image.size, Image.LANCZOS)
+            # # 开始处理的时间
+            # start_time = time.time()
             output_image = self.difix(prompt="remove degradation", image=image, ref_image=ref_image, num_inference_steps=1, timesteps=[199], guidance_scale=0.0).images[0]
+            # 打印处理时间
+            # end_time = time.time()
+            # print(f"Image {i:04d} processed in {end_time - start_time:.2f} seconds.")
+
             output_image = output_image.resize(image.size, Image.LANCZOS)
             os.makedirs(f"{self.render_dir}/novel/{step}/Fixed", exist_ok=True)
             output_image.save(f"{self.render_dir}/novel/{step}/Fixed/{i:04d}.png")
@@ -1139,7 +1155,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
 
     if not cfg.disable_viewer:
         print("Viewer running... Ctrl+C to exit.")
-        time.sleep(1000000)
+        # time.sleep(1000000)  # timing disabled
 
 
 if __name__ == "__main__":
