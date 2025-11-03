@@ -1090,7 +1090,6 @@ class DifixPipeline(
                 # unet_end_time = time.time()
                 # print(f"U-Net time step {i+1}/{len(timesteps)}: {unet_end_time - unet_start_time:.2f} seconds")
 
-                print("do_classifier_free_guidance:", self.do_classifier_free_guidance)
                 # perform guidance
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
@@ -1153,7 +1152,6 @@ class DifixPipeline(
         # decode_end_time = time.time()
         # print(f"Decoding time: {decode_end_time - denoise_end_time:.2f} seconds")
 
-        print("output_type:", output_type)
         if ref_image is not None:
             image = image.chunk(2, dim=0)[0]
         image = self.image_processor.postprocess(image, output_type=output_type, do_denormalize=do_denormalize)
